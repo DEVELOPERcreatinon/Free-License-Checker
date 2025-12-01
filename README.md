@@ -30,7 +30,7 @@ All source code files (except `config.json`) are licensed under the **Mozilla Pu
 
 ```bash
 git clone https://github.com/DEVELOPERcreatinon/Free-Licence-Checker.git
-cd license-server
+cd Free-Licence-Checker
 ```
 
 ### 2. Create Virtual Environment
