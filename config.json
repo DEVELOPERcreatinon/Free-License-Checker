@@ -1,0 +1,52 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 5000,
+    "debug": false,
+    "ssl_enabled": true,
+    "ssl_cert_path": "cert.pem",
+    "ssl_key_path": "key.pem"
+  },
+  "database": {
+    "type": "sqlite",
+    "filename": "licenses.db",
+    "encryption_key": "CHANGE_THIS_TO_RANDOM_32_BYTES_BASE64",
+    "backup_enabled": true,
+    "backup_interval_hours": 24
+  },
+  "security": {
+    "api_key_required": true,
+    "api_keys": ["your_secret_api_key_here"],
+    "rate_limiting_enabled": true,
+    "max_requests_per_minute": 600,
+    "jwt_secret": "CHANGE_THIS_TO_RANDOM_32_BYTES_BASE64",
+    "jwt_expiration_hours": 24,
+    "hmac_secret": "CHANGE_THIS_TO_RANDOM_32_BYTES_BASE64",
+    "require_encrypted_communication": true,
+    "allowed_ips": [],
+    "blocked_ips": []
+  },
+  "licensing": {
+    "key_length": 16,
+    "key_format": "alphanumeric",
+    "auto_generate_keys": true,
+    "keys_per_type": 100,
+    "default_validity_days": 30,
+    "license_types": ["BUSINESS", "PRO", "STUDENT"],
+    "allow_multiple_activations": false,
+    "max_activations_per_key": 1
+  },
+  "rate_limiting": {
+    "storage_uri": "memory://",
+    "strategy": "fixed-window",
+    "storage_options": {}
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "license_server.log",
+    "max_file_size_mb": 100,
+    "backup_count": 5,
+    "log_requests": true,
+    "log_errors": true
+  }
+}
