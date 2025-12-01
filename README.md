@@ -1,5 +1,10 @@
 # License Server System
 
+![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)
+![Flask](https://img.shields.io/badge/Flask-2.3.3-red.svg)
+![Status: Production Ready](https://img.shields.io/badge/Status-Production%20Ready-green.svg)
+
 ## Overview
 
 A secure and scalable license key management server built with Flask. This system provides robust license validation, key generation, and administration features with enterprise-grade security measures.
