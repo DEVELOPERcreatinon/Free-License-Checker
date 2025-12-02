@@ -6,7 +6,7 @@
 ![Статус: Готово к продакшену](https://img.shields.io/badge/Status-Production%20Ready-green.svg)
 
 [Русская версия](ru/readme.md)
-[Английская версия](readme.md)
+[Английская версия](https://github.com/DEVELOPERcreatinon/Free-Licence-Checker/blob/main/readme.md)
 
 ## Обзор
 
