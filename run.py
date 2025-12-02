@@ -10,18 +10,18 @@ import os
 import sys
 
 def main():
-    # Проверка существования config.json
+    # Check for config.json existence
     if not os.path.exists('config.json'):
         print("Error: config.json not found!")
         print("Please create config.json first or run: python generate_keys.py")
         sys.exit(1)
     
-    # Проверка безопасности ключей
+    # Security key check
     with open('config.json', 'r') as f:
         import json
         config = json.load(f)
     
-    # Проверяем, не используются ли ключи по умолчанию
+    # Check if default keys are being used
     default_keys = [
         "CHANGE_THIS_TO_RANDOM_32_BYTES_BASE64",
         "your_secret_api_key_here"
@@ -46,7 +46,7 @@ def main():
         if response.lower() != 'y':
             sys.exit(1)
     
-    # Запуск сервера
+    # Start server
     server = LicenseServer()
     print(f"Starting license server on {config['server']['host']}:{config['server']['port']}")
     server.run()

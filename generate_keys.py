@@ -11,24 +11,24 @@ import os
 from cryptography.fernet import Fernet
 
 def generate_secure_key(length=32):
-    """Генерация безопасного ключа заданной длины в base64"""
+    """Generate secure key of given length in base64"""
     random_bytes = secrets.token_bytes(length)
     return base64.urlsafe_b64encode(random_bytes).decode('utf-8')
 
 def generate_api_key():
-    """Генерация API ключа"""
+    """Generate API key"""
     return "sk_live_" + secrets.token_hex(24)
 
 def generate_config():
-    """Генерация нового конфигурационного файла с безопасными ключами"""
+    """Generate new configuration file with secure keys"""
     
-    # Загрузка существующего конфига если он есть, иначе создание базового
+    # Load existing config if exists, otherwise create base config
     if os.path.exists('config.json'):
         with open('config.json', 'r') as f:
             config = json.load(f)
-        print("📄 Обнаружен существующий config.json, обновляю только ключи...")
+        print("📄 Existing config.json detected, updating only keys...")
     else:
-        print("📄 Создаю новый config.json...")
+        print("📄 Creating new config.json...")
         config = {
             "server": {
                 "host": "0.0.0.0",
@@ -82,22 +82,22 @@ def generate_config():
             }
         }
     
-    # Генерация безопасных ключей
-    print("🔐 Генерация безопасных ключей...")
+    # Generate secure keys
+    print("🔐 Generating secure keys...")
     
-    # Ключ шифрования базы данных (32 байта)
+    # Database encryption key (32 bytes)
     config['database']['encryption_key'] = generate_secure_key(32)
     print(f"  ✓ Database encryption key: {config['database']['encryption_key'][:20]}...")
     
-    # JWT секрет (32 байта)
+    # JWT secret (32 bytes)
     config['security']['jwt_secret'] = generate_secure_key(32)
     print(f"  ✓ JWT secret: {config['security']['jwt_secret'][:20]}...")
     
-    # HMAC секрет (32 байта)
+    # HMAC secret (32 bytes)
     config['security']['hmac_secret'] = generate_secure_key(32)
     print(f"  ✓ HMAC secret: {config['security']['hmac_secret'][:20]}...")
     
-    # API ключи (генерируем 3 ключа)
+    # API keys (generate 3 keys)
     config['security']['api_keys'] = [
         generate_api_key(),
         generate_api_key(),
@@ -106,17 +106,17 @@ def generate_config():
     print(f"  ✓ API keys: {len(config['security']['api_keys'])} keys generated")
     print(f"    • {config['security']['api_keys'][0]}")
     
-    # Сохранение конфигурации
+    # Save configuration
     with open('config.json', 'w') as f:
         json.dump(config, f, indent=2)
     
-    print(f"\n✅ Конфигурационный файл успешно создан/обновлен!")
-    print(f"📁 Файл: config.json")
-    print(f"\n⚠️  ВАЖНО: Сохраните эти ключи в безопасном месте!")
-    print(f"   Они понадобятся для восстановления доступа к данным.")
+    print(f"\n✅ Configuration file successfully created/updated!")
+    print(f"📁 File: config.json")
+    print(f"\n⚠️  IMPORTANT: Save these keys in a secure place!")
+    print(f"   They will be needed to restore access to data.")
     
-    # Генерация административного JWT токена
-    print(f"\n🔑 Для создания административного JWT токена выполните:")
+    # Generate administrative JWT token
+    print(f"\n🔑 To create administrative JWT token, run:")
     print(f"   python create_admin_token.py")
 
 def main():
@@ -124,14 +124,14 @@ def main():
     print("🔐 License Server Key Generator")
     print("=========================================\n")
     
-    print("Этот скрипт сгенерирует безопасные ключи для вашего сервера лицензий.")
-    print("Все ключи будут случайными и уникальными.\n")
+    print("This script will generate secure keys for your license server.")
+    print("All keys will be random and unique.\n")
     
     if os.path.exists('config.json'):
-        print("⚠️  Предупреждение: Существующий config.json будет перезаписан!")
-        response = input("Продолжить? (y/N): ")
+        print("⚠️  Warning: Existing config.json will be overwritten!")
+        response = input("Continue? (y/N): ")
         if response.lower() != 'y':
-            print("❌ Отменено пользователем.")
+            print("❌ Cancelled by user.")
             return
     
     generate_config()

@@ -10,39 +10,39 @@ from datetime import datetime, timedelta
 import base64
 
 def create_admin_token():
-    """Создание JWT токена для администратора"""
+    """Create JWT token for administrator"""
     
     try:
-        # Загрузка конфигурации
+        # Load configuration
         with open('config.json', 'r') as f:
             config = json.load(f)
         
         jwt_secret = config['security']['jwt_secret']
         
-        # Создание полезной нагрузки
+        # Create payload
         payload = {
             'admin': True,
             'username': 'administrator',
             'created': datetime.utcnow().isoformat(),
-            'exp': datetime.utcnow() + timedelta(days=365)  # Токен на 1 год
+            'exp': datetime.utcnow() + timedelta(days=365)  # Token valid for 1 year
         }
         
-        # Создание JWT токена
+        # Create JWT token
         token = jwt.encode(
             payload,
             jwt_secret,
             algorithm='HS256'
         )
         
-        print("✅ Административный токен создан!")
+        print("✅ Administrative token created!")
         print(f"\n🔑 Token: {token}")
-        print(f"\n📋 Пример использования в запросах:")
+        print(f"\n📋 Usage example in requests:")
         print(f"   Authorization: Bearer {token}")
         
         return token
         
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
+        print(f"❌ Error: {e}")
         return None
 
 if __name__ == '__main__':

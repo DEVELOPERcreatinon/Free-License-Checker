@@ -54,11 +54,11 @@ class DatabaseManager:
         self.create_tables()
     
     def create_tables(self):
-        """Создание таблиц в базе данных"""
+        """Create database tables"""
         Base.metadata.create_all(self.engine)
     
     def add_license_key(self, key, license_type, validity_days=None):
-        """Добавление ключа лицензии в базу данных"""
+        """Add license key to database"""
         if validity_days is None:
             validity_days = self.config['licensing']['default_validity_days']
         
@@ -84,10 +84,10 @@ class DatabaseManager:
             session.close()
     
     def validate_license(self, key, license_type, client_info=None, client_ip=None):
-        """Проверка валидности лицензии"""
+        """Validate license"""
         session = self.Session()
         try:
-            # Проверка формата ключа с префиксом
+            # Check key format with prefix
             if not self.security.validate_key_format(key, license_type):
                 log_entry = ActivationLog(
                     key_hash="",
@@ -144,7 +144,7 @@ class DatabaseManager:
                 session.commit()
                 return False, "Maximum activations reached"
             
-            # Обновляем информацию об использовании
+            # Update usage information
             license_key.is_used = True
             license_key.used_date = datetime.utcnow()
             license_key.activation_count += 1
@@ -166,7 +166,7 @@ class DatabaseManager:
             session.close()
     
     def get_license_stats(self):
-        """Получение статистики по лицензиям"""
+        """Get license statistics"""
         session = self.Session()
         try:
             total_keys = session.query(LicenseKey).count()

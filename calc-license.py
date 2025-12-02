@@ -1,4 +1,3 @@
-
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 from datetime import datetime
@@ -27,14 +26,14 @@ import hashlib
 import base64
 import json
 
-# Отключаем SSL предупреждения
+# Disable SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 warnings.filterwarnings("ignore", category=InsecureRequestWarning)
 
-# ==================== ЛИЦЕНЗИОННАЯ СИСТЕМА ====================
+# ==================== LICENSE SYSTEM ====================
 
 class LicenseManager:
-    """Менеджер лицензий для калькулятора с привязкой к устройству"""
+    """License manager for calculator with device binding"""
     
     def __init__(self):
         self.license_server_url = "https://192.168.0.104:5000"
@@ -49,36 +48,38 @@ class LicenseManager:
         self.verified_keys = self._load_verified_keys()
         self.cert_path = "cert.pem"
         self.hmac_secret = "your-secret"
+    
     def _generate_hmac_signature(self, data: dict) -> str:
-        """Генерирует HMAC подпись для данных"""
+        """Generate HMAC signature for data"""
         try:
-            # Форматируем JSON ТОЧНО так же как на сервере
-            # Сервер использует: json.dumps(data, sort_keys=True, separators=(',', ':'))
+            # Format JSON EXACTLY as on server
+            # Server uses: json.dumps(data, sort_keys=True, separators=(',', ':'))
             payload_str = json.dumps(data, sort_keys=True, separators=(',', ':'))
             
-            print(f"🔐 Данные для подписи: {payload_str}")
+            print(f"🔐 Data for signature: {payload_str}")
             
-            # Декодируем base64 секрет
+            # Decode base64 secret
             secret_bytes = base64.b64decode(self.hmac_secret)
             
-            # Создаем HMAC подпись
+            # Create HMAC signature
             signature = hmac.new(
                 secret_bytes,
                 payload_str.encode('utf-8'),
                 hashlib.sha256
             ).digest()
             
-            # Кодируем в base64
+            # Encode to base64
             signature_b64 = base64.b64encode(signature).decode('utf-8')
-            print(f"🔐 Сгенерированная подпись: {signature_b64}")
+            print(f"🔐 Generated signature: {signature_b64}")
             
             return signature_b64
             
         except Exception as e:
-            print(f"⚠️ Ошибка генерации HMAC: {e}")
+            print(f"⚠️ HMAC generation error: {e}")
             return ""
+    
     def _load_verified_keys(self) -> Dict[str, Dict]:
-        """Загрузка подтвержденных ключей из файла"""
+        """Load verified keys from file"""
         try:
             if os.path.exists(self.verified_keys_file):
                 with open(self.verified_keys_file, 'r', encoding='utf-8') as f:
@@ -88,19 +89,19 @@ class LicenseManager:
         return {}
     
     def _save_verified_keys(self):
-        """Сохранение подтвержденных ключей в файл"""
+        """Save verified keys to file"""
         try:
             with open(self.verified_keys_file, 'w', encoding='utf-8') as f:
                 json.dump(self.verified_keys, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"⚠️ Не удалось сохранить verified_keys: {e}")
+            print(f"⚠️ Failed to save verified_keys: {e}")
     
     def _generate_device_id(self) -> str:
-        """Генерирует уникальный ID устройства"""
+        """Generate unique device ID"""
         try:
-            # Комбинируем несколько идентификаторов для уникальности
+            # Combine several identifiers for uniqueness
             system_info = f"{platform.node()}-{platform.system()}-{platform.processor()}"
-            # Добавляем MAC адрес если доступен
+            # Add MAC address if available
             try:
                 mac = ':'.join(['{:02x}'.format((uuid.getnode() >> elements) & 0xff) 
                                for elements in range(0,8*6,8)][::-1])
@@ -108,15 +109,15 @@ class LicenseManager:
             except:
                 pass
             
-            # Создаем хеш
+            # Create hash
             device_id = hashlib.sha256(system_info.encode()).hexdigest()[:16]
             return device_id
         except Exception:
-            # Fallback - случайный ID
+            # Fallback - random ID
             return str(uuid.uuid4())[:16]
         
     def _get_default_features(self) -> Dict[str, bool]:
-        """Возвращает базовые функции (без лицензии)"""
+        """Return basic functions (without license)"""
         return {
             'basic_calculations': True,
             'trigonometry': True,
@@ -125,7 +126,7 @@ class LicenseManager:
             'variables': True,
             'history': True,
             
-            # Премиум функции (требуют лицензию)
+            # Premium functions (require license)
             'high_precision': False,
             'physics_engine': False,
             'math_engine': False,
@@ -137,7 +138,7 @@ class LicenseManager:
         }
     
     def _get_license_features(self, license_type: str) -> Dict[str, bool]:
-        """Возвращает функции в зависимости от типа лицензии"""
+        """Return functions depending on license type"""
         features = self._get_default_features()
         
         if license_type == "STUDENT":
@@ -173,9 +174,9 @@ class LicenseManager:
         return features
     
     def validate_license(self, license_key: str) -> Tuple[bool, str]:
-        """Проверяет лицензию на сервере с привязкой к устройству"""
+        """Validate license on server with device binding"""
         try:
-            print(f"🔐 Отправка запроса на сервер: {self.license_server_url}")
+            print(f"🔐 Sending request to server: {self.license_server_url}")
             
             license_type = self._detect_license_type(license_key)
             
@@ -187,7 +188,7 @@ class LicenseManager:
                 'device_id': self.device_id
             }
             
-            # Генерируем HMAC подпись ДО отправки
+            # Generate HMAC signature BEFORE sending
             signature = self._generate_hmac_signature(payload)
             
             headers = {
@@ -196,21 +197,21 @@ class LicenseManager:
                 'X-Signature': signature
             }
             
-            print(f"📦 Отправляемые данные: {json.dumps(payload, indent=2)}")
-            print(f"🔐 HMAC подпись: {signature}")
-            print(f"📋 Заголовки: {headers}")
+            print(f"📦 Data being sent: {json.dumps(payload, indent=2)}")
+            print(f"🔐 HMAC signature: {signature}")
+            print(f"📋 Headers: {headers}")
             
             response = requests.post(
                 f"{self.license_server_url}/api/validate",
-                json=payload,  # Отправляем оригинальный payload
+                json=payload,  # Send original payload
                 headers=headers,
                 timeout=10,
                 verify=False
             )
             
-            print(f"📡 Статус ответа: {response.status_code}")
-            print(f"📄 Тело ответа: {response.text}")
-            print(f"📋 Заголовки ответа: {dict(response.headers)}")
+            print(f"📡 Response status: {response.status_code}")
+            print(f"📄 Response body: {response.text}")
+            print(f"📋 Response headers: {dict(response.headers)}")
             
             if response.status_code == 200:
                 data = response.json()
@@ -221,23 +222,23 @@ class LicenseManager:
                     self.license_valid = True
                     self.license_features = self._get_license_features(license_type)
                     self._auto_save()
-                    return True, f"✅ Лицензия {license_type} активирована! Доступны премиум функции."
+                    return True, f"✅ {license_type} license activated! Premium functions available."
                 else:
-                    return False, f"❌ Ошибка лицензии: {data.get('message', 'Неизвестная ошибка')}"
+                    return False, f"❌ License error: {data.get('message', 'Unknown error')}"
             elif response.status_code == 401:
-                return False, "❌ Ошибка аутентификации (401)"
+                return False, "❌ Authentication error (401)"
             elif response.status_code == 403:
-                return False, "❌ Доступ запрещен (403)"
+                return False, "❌ Access denied (403)"
             else:
-                return False, f"❌ Ошибка сервера: {response.status_code}"
+                return False, f"❌ Server error: {response.status_code}"
                 
         except Exception as e:
-            return False, f"❌ Ошибка проверки лицензии: {str(e)}"
+            return False, f"❌ License validation error: {str(e)}"
 
     def _validate_with_ssl_bypass(self, license_key: str) -> Tuple[bool, str]:
-        """Проверка лицензии с отключенной SSL проверкой"""
+        """License validation with disabled SSL verification"""
         try:
-            print("⚠️  Используется небезопасное соединение (самоподписанный сертификат)")
+            print("⚠️  Using insecure connection (self-signed certificate)")
             
             license_type = self._detect_license_type(license_key)
             
@@ -273,17 +274,17 @@ class LicenseManager:
                     self.license_features = self._get_license_features(license_type)
                     self._auto_save()
                     
-                    return True, f"✅ Лицензия {license_type} активирована! Доступны премиум функции."
+                    return True, f"✅ {license_type} license activated! Premium functions available."
                 else:
-                    return False, f"❌ Ошибка лицензии: {data.get('message', 'Неизвестная ошибка')}"
+                    return False, f"❌ License error: {data.get('message', 'Unknown error')}"
             else:
                 return self._validate_license_offline(license_key)
                 
         except Exception as e:
-            return False, f"❌ Ошибка SSL соединения: {str(e)}"
+            return False, f"❌ SSL connection error: {str(e)}"
 
     def _validate_with_certificate(self, license_key: str) -> Tuple[bool, str]:
-        """Проверка лицензии с использованием сертификата"""
+        """License validation using certificate"""
         try:
             license_type = self._detect_license_type(license_key)
             
@@ -300,7 +301,7 @@ class LicenseManager:
                 'Content-Type': 'application/json'
             }
             
-            # Используем сертификат если он существует
+            # Use certificate if it exists
             verify_cert = self.cert_path if os.path.exists(self.cert_path) else True
             
             response = requests.post(
@@ -322,20 +323,20 @@ class LicenseManager:
                     self.license_features = self._get_license_features(license_type)
                     self._auto_save()
                     
-                    return True, f"✅ Лицензия {license_type} активирована!"
+                    return True, f"✅ {license_type} license activated!"
                 else:
-                    return False, f"❌ Ошибка лицензии: {data.get('message', 'Неизвестная ошибка')}"
+                    return False, f"❌ License error: {data.get('message', 'Unknown error')}"
             else:
                 return self._validate_license_offline(license_key)
                 
         except requests.exceptions.SSLError:
-            # Если SSL ошибка, пробуем без проверки
+            # If SSL error, try without verification
             return self._validate_with_ssl_bypass(license_key)
         except Exception as e:
-            return False, f"❌ Ошибка соединения: {str(e)}"
+            return False, f"❌ Connection error: {str(e)}"
 
     def _add_verified_key(self, license_key: str, license_type: str):
-        """Добавляет ключ в список подтвержденных"""
+        """Add key to verified list"""
         self.verified_keys[license_key] = {
             'type': license_type,
             'verified_at': datetime.now().isoformat(),
@@ -344,11 +345,11 @@ class LicenseManager:
         self._save_verified_keys()
     
     def _is_key_verified(self, license_key: str) -> bool:
-        """Проверяет, был ли ключ подтвержден сервером"""
+        """Check if key was verified by server"""
         return license_key in self.verified_keys
     
     def _detect_license_type(self, license_key: str) -> str:
-        """Определяет тип лицензии по ключу"""
+        """Detect license type by key"""
         license_key_upper = license_key.upper()
         
         if license_key_upper.startswith("BUS"):
@@ -361,36 +362,36 @@ class LicenseManager:
             return "STUDENT"
     
     def _validate_license_offline(self, license_key: str) -> Tuple[bool, str]:
-        """Оффлайн проверка лицензии - ТОЛЬКО для подтвержденных ключей"""
-        # Проверяем базовый формат
+        """Offline license validation - ONLY for verified keys"""
+        # Check basic format
         if len(license_key) != 16:
-            return False, "❌ Неверный формат лицензионного ключа"
+            return False, "❌ Invalid license key format"
         
-        # Проверяем, был ли ключ подтвержден сервером
+        # Check if key was verified by server
         if not self._is_key_verified(license_key):
-            return False, "❌ Ключ не подтвержден сервером. Требуется онлайн-активация."
+            return False, "❌ Key not verified by server. Online activation required."
         
-        # Получаем информацию о подтвержденном ключе
+        # Get verified key information
         key_info = self.verified_keys.get(license_key, {})
         license_type = key_info.get('type', self._detect_license_type(license_key))
         
-        # Проверяем привязку к устройству
+        # Check device binding
         saved_device_id = key_info.get('device_id')
         if saved_device_id and saved_device_id != self.device_id:
-            return False, "❌ Лицензия привязана к другому устройству"
+            return False, "❌ License bound to another device"
         
         self.license_key = license_key
         self.license_type = license_type
         self.license_valid = True
         self.license_features = self._get_license_features(license_type)
         
-        # Автосохранение при оффлайн активации
+        # Auto-save on offline activation
         self._auto_save()
         
-        return True, f"✅ Лицензия {license_type} активирована (оффлайн-режим)"
+        return True, f"✅ {license_type} license activated (offline mode)"
     
     def _auto_save(self):
-        """Автосохранение состояния лицензии"""
+        """Auto-save license state"""
         try:
             state = {
                 'license_key': self.license_key,
@@ -404,49 +405,49 @@ class LicenseManager:
             with open(self.state_file, 'wb') as f:
                 pickle.dump(state, f)
         except Exception as e:
-            print(f"⚠️ Не удалось автосохранить лицензию: {e}")
+            print(f"⚠️ Failed to auto-save license: {e}")
     
     def auto_load(self) -> bool:
-        """Автозагрузка состояния лицензии"""
+        """Auto-load license state"""
         try:
             if os.path.exists(self.state_file):
                 with open(self.state_file, 'rb') as f:
                     state = pickle.load(f)
                 
-                # Проверяем привязку к устройству
+                # Check device binding
                 saved_device_id = state.get('device_id')
                 if saved_device_id != self.device_id:
-                    print("⚠️ Лицензия привязана к другому устройству")
+                    print("⚠️ License bound to another device")
                     return False
                 
-                # Восстанавливаем лицензию
+                # Restore license
                 self.license_key = state.get('license_key')
                 self.license_type = state.get('license_type')
                 self.license_valid = state.get('license_valid', False)
                 self.license_features = state.get('license_features', self._get_default_features())
                 
-                # Проверяем, что ключ все еще подтвержден
+                # Check if key is still verified
                 if self.license_valid and self.license_key and not self._is_key_verified(self.license_key):
-                    print("⚠️ Лицензия больше не подтверждена")
+                    print("⚠️ License no longer verified")
                     self.license_valid = False
                     return False
                 
                 if self.license_valid:
-                    print(f"🔑 Лицензия {self.license_type} автоматически восстановлена")
+                    print(f"🔑 {self.license_type} license automatically restored")
                     return True
                     
         except Exception as e:
-            print(f"⚠️ Не удалось автозагрузить лицензию: {e}")
+            print(f"⚠️ Failed to auto-load license: {e}")
         
         return False
     
     def has_feature(self, feature: str) -> bool:
-        """Проверяет доступность функции"""
+        """Check feature availability"""
         return self.license_features.get(feature, False)
     
     def get_license_info(self) -> Dict[str, Any]:
-        """Возвращает информацию о лицензии"""
-        verification_status = "✅ Подтвержден" if self._is_key_verified(self.license_key) else "❌ Не подтвержден" if self.license_key else "N/A"
+        """Return license information"""
+        verification_status = "✅ Verified" if self._is_key_verified(self.license_key) else "❌ Not verified" if self.license_key else "N/A"
         
         return {
             'valid': self.license_valid,
@@ -458,53 +459,53 @@ class LicenseManager:
         }
     
     def reset_license(self):
-        """Сбрасывает лицензию"""
+        """Reset license"""
         self.license_key = None
         self.license_type = None
         self.license_valid = False
         self.license_features = self._get_default_features()
         
-        # Удаляем файл состояния
+        # Delete state file
         try:
             if os.path.exists(self.state_file):
                 os.remove(self.state_file)
         except:
             pass
 
-# ==================== КЛАССЫ ИСКЛЮЧЕНИЙ ====================
+# ==================== EXCEPTION CLASSES ====================
 
 class CalculatorError(Exception):
-    """Базовое исключение калькулятора"""
+    """Base calculator exception"""
     pass
 
 class CalculationError(CalculatorError):
-    """Ошибка вычисления выражения"""
+    """Expression calculation error"""
     pass
 
 class PhysicsError(CalculatorError):
-    """Ошибка в физических расчетах"""
+    """Physics calculation error"""
     pass
 
 class MathError(CalculatorError):
-    """Ошибка в математических операциях"""
+    """Math operations error"""
     pass
 
 class StatisticsError(CalculatorError):
-    """Ошибка в статистических расчетах"""
+    """Statistics calculation error"""
     pass
 
 class LicenseError(CalculatorError):
-    """Ошибка лицензии"""
+    """License error"""
     pass
 
-# ==================== БЕЗОПАСНЫЙ ВЫЧИСЛИТЕЛЬ ====================
+# ==================== SAFE EVALUATOR ====================
 
 class ExpressionParser:
-    """Безопасный парсер математических выражений"""
+    """Safe mathematical expression parser"""
     
     @staticmethod
     def tokenize(expression: str) -> List[str]:
-        """Разбивает выражение на токены"""
+        """Split expression into tokens"""
         expression = expression.replace(' ', '')
         tokens = []
         current_token = ''
@@ -526,7 +527,7 @@ class ExpressionParser:
     
     @staticmethod
     def is_valid_expression(tokens: List[str]) -> bool:
-        """Проверяет безопасность выражения"""
+        """Check expression safety"""
         valid_chars = set('+-*/^().0123456789abcdefghijklmnopqrstuvwxyz_')
         for token in tokens:
             if not all(c in valid_chars for c in token.lower()):
@@ -534,7 +535,7 @@ class ExpressionParser:
         return True
 
 class SafeEvaluator:
-    """Безопасный вычислитель выражений"""
+    """Safe expression evaluator"""
     
     def __init__(self, license_manager: LicenseManager):
         self.license_manager = license_manager
@@ -542,24 +543,24 @@ class SafeEvaluator:
         self.constants = self._init_constants()
     
     def _init_functions(self) -> Dict[str, Any]:
-        """Инициализация безопасных функций"""
+        """Initialize safe functions"""
         functions = {
-            # Тригонометрия
+            # Trigonometry
             'sin': math.sin, 'cos': math.cos, 'tan': math.tan,
             'asin': math.asin, 'acos': math.acos, 'atan': math.atan,
             'sinh': math.sinh, 'cosh': math.cosh, 'tanh': math.tanh,
             'atan2': math.atan2,
             
-            # Экспоненты и логарифмы
+            # Exponents and logarithms
             'exp': math.exp, 'log': math.log, 'log10': math.log10, 
             'log2': math.log2, 'sqrt': math.sqrt, 'pow': math.pow,
             
-            # Округление
+            # Rounding
             'ceil': math.ceil, 'floor': math.floor, 'round': round,
             'abs': abs,
         }
         
-        # Расширенные функции требуют лицензии
+        # Extended functions require license
         if self.license_manager.has_feature('advanced_functions'):
             functions.update({
                 'gamma': math.gamma, 'lgamma': math.lgamma, 
@@ -569,7 +570,7 @@ class SafeEvaluator:
         return functions
     
     def _init_constants(self) -> Dict[str, float]:
-        """Инициализация констант"""
+        """Initialize constants"""
         return {
             'pi': math.pi, 'e': math.e, 'tau': math.tau,
             'inf': float('inf'), 'nan': float('nan'),
@@ -577,66 +578,66 @@ class SafeEvaluator:
     
     def evaluate(self, expression: str, variables: Dict[str, float] = None, 
                 high_precision: bool = False) -> float:
-        """Безопасное вычисление выражения"""
-        # Проверка лицензии для высокоточной арифметики
+        """Safe expression evaluation"""
+        # License check for high precision arithmetic
         if high_precision and not self.license_manager.has_feature('high_precision'):
-            raise LicenseError("Высокая точность требует активации лицензии")
+            raise LicenseError("High precision requires license activation")
             
         try:
-            # Предобработка
+            # Preprocessing
             expr = self._preprocess_expression(expression)
             
-            # Проверка безопасности
+            # Safety check
             tokens = ExpressionParser.tokenize(expr)
             if not ExpressionParser.is_valid_expression(tokens):
-                raise CalculationError("Выражение содержит недопустимые символы")
+                raise CalculationError("Expression contains invalid characters")
             
-            # Создание окружения
+            # Create environment
             env = {**self.constants, **self.functions}
             if variables:
                 env.update(variables)
             
-            # Компиляция и выполнение
+            # Compile and execute
             code = compile(expr, '<string>', 'eval')
             result = eval(code, {'__builtins__': {}}, env)
             
             if not isinstance(result, (int, float)):
-                raise CalculationError("Результат должен быть числом")
+                raise CalculationError("Result must be a number")
             
-            # Высокая точность через decimal
+            # High precision via decimal
             if high_precision:
                 if not self.license_manager.has_feature('high_precision'):
-                    raise LicenseError("Высокая точность требует лицензии PRO или BUSINESS")
+                    raise LicenseError("High precision requires PRO or BUSINESS license")
                     
                 with decimal.localcontext() as ctx:
-                    ctx.prec = 1000  # Очень высокая точность для вычислений
+                    ctx.prec = 1000  # Very high precision for calculations
                     decimal_result = Decimal(str(result))
                     return float(decimal_result)
             else:
                 return float(result)
             
         except SyntaxError as e:
-            raise CalculationError(f"Синтаксическая ошибка: {e}")
+            raise CalculationError(f"Syntax error: {e}")
         except NameError as e:
-            raise CalculationError(f"Неизвестная переменная или функция: {e}")
+            raise CalculationError(f"Unknown variable or function: {e}")
         except ZeroDivisionError:
-            raise CalculationError("Деление на ноль")
+            raise CalculationError("Division by zero")
         except OverflowError:
-            raise CalculationError("Переполнение вычислений")
+            raise CalculationError("Calculation overflow")
         except Exception as e:
-            raise CalculationError(f"Ошибка вычисления: {e}")
+            raise CalculationError(f"Calculation error: {e}")
 
     def _preprocess_expression(self, expr: str) -> str:
-        """Предобработка выражения"""
+        """Preprocess expression"""
         expr = expr.replace('^', '**')
         expr = expr.replace('π', 'pi')
         return expr
 
-# ==================== КАЛЬКУЛЯТОР ====================
+# ==================== CALCULATOR ====================
 
 @dataclass
 class CalculationResult:
-    """Результат вычисления"""
+    """Calculation result"""
     expression: str
     result: float
     timestamp: float
@@ -644,7 +645,7 @@ class CalculationResult:
     error_message: str = ""
 
 class ScientificCalculator:
-    """Научный калькулятор с историей и переменными"""
+    """Scientific calculator with history and variables"""
     
     def __init__(self, license_manager: LicenseManager, precision: int = 10, angle_mode: str = 'rad'):
         self.license_manager = license_manager
@@ -658,7 +659,7 @@ class ScientificCalculator:
         self._load_history()
     
     def _init_default_variables(self):
-        """Инициализация физических констант"""
+        """Initialize physical constants"""
         physical_constants = {
             'G': 6.67430e-11,
             'c': 299792458,
@@ -672,47 +673,47 @@ class ScientificCalculator:
         self.variables.update(physical_constants)
     
     def _save_history(self):
-        """Сохранение истории в файл"""
+        """Save history to file"""
         try:
             with open(self.history_file, 'wb') as f:
                 pickle.dump(self.history, f)
         except Exception as e:
-            print(f"⚠️ Предупреждение: не удалось сохранить историю: {e}")
+            print(f"⚠️ Warning: failed to save history: {e}")
     
     def _load_history(self):
-        """Загрузка истории из файла"""
+        """Load history from file"""
         try:
             if os.path.exists(self.history_file):
                 with open(self.history_file, 'rb') as f:
                     self.history = pickle.load(f)
-                print(f"📖 Загружено {len(self.history)} записей из истории")
+                print(f"📖 Loaded {len(self.history)} records from history")
         except Exception as e:
-            print(f"⚠️ Предупреждение: не удалось загрузить историю: {e}")
+            print(f"⚠️ Warning: failed to load history: {e}")
             self.history = []
     
     def calculate(self, expression: str) -> float:
-        """Вычисление выражения с сохранением в историю"""
+        """Calculate expression with history saving"""
         try:
-            # Проверка лицензии для расширенных функций
+            # License check for extended functions
             if any(func in expression.upper() for func in ['GAMMA', 'LGAMMA', 'ERF']):
                 if not self.license_manager.has_feature('advanced_functions'):
-                    raise LicenseError("Расширенные математические функции требуют лицензии PRO или BUSINESS")
+                    raise LicenseError("Extended mathematical functions require PRO or BUSINESS license")
             
-            # Временная замена переменных
+            # Temporary variable replacement
             temp_vars = self.variables.copy()
             
-            # Конвертация углов для тригонометрических функций
+            # Angle conversion for trigonometric functions
             if self.angle_mode != 'rad':
                 temp_vars.update(self._get_angle_conversion_functions())
             
-            # Используем высокую точность если нужно
+            # Use high precision if needed
             high_precision = self.precision > 15
             result = self.evaluator.evaluate(expression, temp_vars, high_precision)
             
-            # Округление с учетом высокой точности
+            # Rounding considering high precision
             if self.precision > 15:
                 if not self.license_manager.has_feature('high_precision'):
-                    raise LicenseError("Высокая точность (>15 знаков) требует лицензии")
+                    raise LicenseError("High precision (>15 digits) requires license")
                     
                 with decimal.localcontext() as ctx:
                     ctx.prec = self.precision + 10
@@ -721,7 +722,7 @@ class ScientificCalculator:
             else:
                 rounded_result = round(result, self.precision)
             
-            # Сохранение в историю
+            # Save to history
             calc_result = CalculationResult(
                 expression=expression,
                 result=rounded_result,
@@ -729,14 +730,14 @@ class ScientificCalculator:
             )
             self.history.append(calc_result)
             
-            # Автосохранение истории
+            # Auto-save history
             if len(self.history) % 10 == 0:
                 self._save_history()
             
             return rounded_result
             
         except (CalculationError, LicenseError) as e:
-            # Сохранение ошибки в историю
+            # Save error to history
             error_result = CalculationResult(
                 expression=expression,
                 result=float('nan'),
@@ -749,7 +750,7 @@ class ScientificCalculator:
             raise
     
     def _get_angle_conversion_functions(self) -> Dict[str, Any]:
-        """Получение функций с конвертацией углов"""
+        """Get functions with angle conversion"""
         if self.angle_mode == 'deg':
             return {
                 'sin': lambda x: math.sin(math.radians(x)),
@@ -771,109 +772,109 @@ class ScientificCalculator:
         return {}
     
     def set_variable(self, name: str, value: float):
-        """Установка переменной"""
+        """Set variable"""
         if not name.isidentifier():
-            raise CalculationError(f"Недопустимое имя переменной: {name}")
+            raise CalculationError(f"Invalid variable name: {name}")
         self.variables[name] = value
     
     def get_history(self, limit: int = 10) -> List[CalculationResult]:
-        """Получение истории вычислений"""
+        """Get calculation history"""
         return self.history[-limit:] if limit else self.history
     
     def clear_history(self):
-        """Очистка истории"""
+        """Clear history"""
         self.history.clear()
         self._save_history()
     
     def export_history(self, filename: str = "calculator_history_export.txt"):
-        """Экспорт истории в текстовый файл"""
+        """Export history to text file"""
         if not self.license_manager.has_feature('export_features'):
-            raise LicenseError("Экспорт истории требует лицензии BUSINESS")
+            raise LicenseError("History export requires BUSINESS license")
             
         try:
             with open(filename, 'w', encoding='utf-8') as f:
-                f.write("ИСТОРИЯ ВЫЧИСЛЕНИЙ\n")
+                f.write("CALCULATION HISTORY\n")
                 f.write("=" * 50 + "\n")
                 for i, result in enumerate(self.history):
-                    status = "УСПЕХ" if result.success else "ОШИБКА"
+                    status = "SUCCESS" if result.success else "ERROR"
                     f.write(f"{i+1:4d}. [{status}] {result.expression}\n")
                     if result.success:
                         if self.precision > 15:
-                            f.write(f"     Результат: {result.result:.15f}...\n")
+                            f.write(f"     Result: {result.result:.15f}...\n")
                         else:
-                            f.write(f"     Результат: {result.result}\n")
+                            f.write(f"     Result: {result.result}\n")
                     else:
-                        f.write(f"     Ошибка: {result.error_message}\n")
+                        f.write(f"     Error: {result.error_message}\n")
                     time_str = datetime.fromtimestamp(result.timestamp).strftime('%Y-%m-%d %H:%M:%S')
-                    f.write(f"     Время: {time_str}\n")
+                    f.write(f"     Time: {time_str}\n")
                     f.write("-" * 50 + "\n")
-            print(f"✅ История экспортирована в {filename}")
+            print(f"✅ History exported to {filename}")
         except Exception as e:
-            print(f"❌ Ошибка экспорта истории: {e}")
+            print(f"❌ History export error: {e}")
     
     def format_result(self, result: float) -> str:
-        """Форматирует результат с учетом текущей точности"""
+        """Format result considering current precision"""
         if self.precision > 15:
             display_precision = min(self.precision, 50)
             return f"{result:.{display_precision}f}"
         else:
             return f"{result}"
 
-# ==================== ФИЗИЧЕСКИЙ ДВИГАТЕЛЬ ====================
+# ==================== PHYSICS ENGINE ====================
 
 class PhysicsEngine:
-    """Двигатель физических расчетов"""
+    """Physics calculation engine"""
     
     def __init__(self, calculator: ScientificCalculator, license_manager: LicenseManager):
         self.calc = calculator
         self.license_manager = license_manager
     
     def _check_license(self):
-        """Проверяет наличие лицензии для физических расчетов"""
+        """Check license for physics calculations"""
         if not self.license_manager.has_feature('physics_engine'):
-            raise LicenseError("Физические расчеты требуют активации лицензии")
+            raise LicenseError("Physics calculations require license activation")
     
     def pendulum_period(self, length: float, gravity: float = None) -> float:
-        """Период математического маятника"""
+        """Period of mathematical pendulum"""
         self._check_license()
         
         if length <= 0:
-            raise PhysicsError("Длина маятника должна быть положительной")
+            raise PhysicsError("Pendulum length must be positive")
         
         if gravity is None:
             gravity = self.calc.variables.get('g', 9.80665)
         
         if gravity <= 0:
-            raise PhysicsError("Ускорение свободного падения должно быть положительным")
+            raise PhysicsError("Gravity acceleration must be positive")
         
         return 2 * math.pi * math.sqrt(length / gravity)
     
     def lorentz_factor(self, velocity: float) -> float:
-        """Релятивистский γ-фактор"""
+        """Relativistic γ-factor"""
         self._check_license()
         
         c = self.calc.variables.get('c', 299792458)
         
         if abs(velocity) >= c:
-            raise PhysicsError("Скорость не может превышать скорость света")
+            raise PhysicsError("Velocity cannot exceed speed of light")
         
         return 1 / math.sqrt(1 - (velocity / c) ** 2)
     
     def kinetic_energy(self, mass: float, velocity: float) -> float:
-        """Кинетическая энергия"""
+        """Kinetic energy"""
         self._check_license()
         
         if mass < 0:
-            raise PhysicsError("Масса не может быть отрицательной")
+            raise PhysicsError("Mass cannot be negative")
         
         return 0.5 * mass * velocity ** 2
     
     def schwarzschild_radius(self, mass: float) -> float:
-        """Радиус Шварцшильда"""
+        """Schwarzschild radius"""
         self._check_license()
         
         if mass <= 0:
-            raise PhysicsError("Масса должна быть положительной")
+            raise PhysicsError("Mass must be positive")
         
         G = self.calc.variables.get('G', 6.67430e-11)
         c = self.calc.variables.get('c', 299792458)
@@ -881,40 +882,40 @@ class PhysicsEngine:
         return 2 * G * mass / (c ** 2)
     
     def orbital_velocity(self, mass: float, radius: float) -> float:
-        """Первая космическая скорость"""
+        """Orbital velocity"""
         self._check_license()
         
         if mass <= 0 or radius <= 0:
-            raise PhysicsError("Масса и радиус должны быть положительными")
+            raise PhysicsError("Mass and radius must be positive")
         
         G = self.calc.variables.get('G', 6.67430e-11)
         return math.sqrt(G * mass / radius)
     
     def escape_velocity(self, mass: float, radius: float) -> float:
-        """Вторая космическая скорость"""
+        """Escape velocity"""
         self._check_license()
         
         if mass <= 0 or radius <= 0:
-            raise PhysicsError("Масса и радиус должны быть положительными")
+            raise PhysicsError("Mass and radius must be positive")
         
         return math.sqrt(2) * self.orbital_velocity(mass, radius)
 
-# ==================== МАТЕМАТИЧЕСКИЙ ДВИГАТЕЛЬ ====================
+# ==================== MATH ENGINE ====================
 
 class MathEngine:
-    """Двигатель математических расчетов"""
+    """Mathematical calculation engine"""
     
     def __init__(self, calculator: ScientificCalculator, license_manager: LicenseManager):
         self.calc = calculator
         self.license_manager = license_manager
     
     def _check_license(self):
-        """Проверяет наличие лицензии для математических расчетов"""
+        """Check license for mathematical calculations"""
         if not self.license_manager.has_feature('math_engine'):
-            raise LicenseError("Математические расчеты требуют активации лицензии")
+            raise LicenseError("Mathematical calculations require license activation")
     
     def solve_equation(self, equation: str, variable: str = 'x') -> List[float]:
-        """Решение алгебраического уравнения"""
+        """Solve algebraic equation"""
         self._check_license()
         
         try:
@@ -926,7 +927,7 @@ class MathEngine:
                     left, right = parts
                     expr = sp.sympify(f"({left}) - ({right})")
                 else:
-                    raise MathError("Неверный формат уравнения")
+                    raise MathError("Invalid equation format")
             else:
                 expr = sp.sympify(equation)
             
@@ -943,10 +944,10 @@ class MathEngine:
             return numeric_solutions
             
         except Exception as e:
-            raise MathError(f"Ошибка решения уравнения: {e}")
+            raise MathError(f"Equation solving error: {e}")
     
     def derivative(self, expression: str, variable: str = 'x', point: float = None) -> Union[str, float]:
-        """Вычисление производной"""
+        """Calculate derivative"""
         self._check_license()
         
         try:
@@ -960,15 +961,15 @@ class MathEngine:
                 return str(deriv)
             
         except Exception as e:
-            raise MathError(f"Ошибка вычисления производной: {e}")
+            raise MathError(f"Derivative calculation error: {e}")
     
     def definite_integral(self, expression: str, variable: str = 'x', 
                          limits: Tuple[float, float] = None) -> float:
-        """Вычисление определенного интеграла"""
+        """Calculate definite integral"""
         self._check_license()
         
         if limits is None:
-            raise MathError("Не указаны пределы интегрирования")
+            raise MathError("Integration limits not specified")
         
         try:
             a, b = limits
@@ -979,35 +980,35 @@ class MathEngine:
             return float(result.evalf())
             
         except Exception as e:
-            raise MathError(f"Ошибка вычисления интеграла: {e}")
+            raise MathError(f"Integral calculation error: {e}")
 
-# ==================== СТАТИСТИЧЕСКИЙ ДВИГАТЕЛЬ ====================
+# ==================== STATISTICS ENGINE ====================
 
 class StatisticsEngine:
-    """Двигатель статистических расчетов"""
+    """Statistical calculation engine"""
     
     def __init__(self, calculator: ScientificCalculator, license_manager: LicenseManager):
         self.calc = calculator
         self.license_manager = license_manager
     
     def _check_license(self):
-        """Проверяет наличие лицензии для статистических расчетов"""
+        """Check license for statistical calculations"""
         if not self.license_manager.has_feature('statistics_engine'):
-            raise LicenseError("Статистические расчеты требуют активации лицензии")
+            raise LicenseError("Statistical calculations require license activation")
     
     def validate_data(self, data: List[float]) -> None:
-        """Валидация входных данных"""
+        """Validate input data"""
         if not data:
-            raise StatisticsError("Данные не могут быть пустыми")
+            raise StatisticsError("Data cannot be empty")
         
         if len(data) < 2:
-            raise StatisticsError("Недостаточно данных для статистического анализа")
+            raise StatisticsError("Insufficient data for statistical analysis")
         
         if any(math.isnan(x) or math.isinf(x) for x in data):
-            raise StatisticsError("Данные содержат NaN или бесконечности")
+            raise StatisticsError("Data contains NaN or infinities")
     
     def descriptive_statistics(self, data: List[float]) -> Dict[str, float]:
-        """Описательная статистика"""
+        """Descriptive statistics"""
         self._check_license()
         self.validate_data(data)
         
@@ -1038,14 +1039,14 @@ class StatisticsEngine:
             
             return stats_dict
         except Exception as e:
-            raise StatisticsError(f"Ошибка вычисления статистики: {e}")
+            raise StatisticsError(f"Statistics calculation error: {e}")
     
     def linear_regression(self, x_data: List[float], y_data: List[float]) -> Dict[str, float]:
-        """Линейная регрессия"""
+        """Linear regression"""
         self._check_license()
         
         if len(x_data) != len(y_data):
-            raise StatisticsError("Размеры массивов x и y должны совпадать")
+            raise StatisticsError("x and y array sizes must match")
         
         self.validate_data(x_data)
         self.validate_data(y_data)
@@ -1061,12 +1062,12 @@ class StatisticsEngine:
                 'std_error': std_err,
             }
         except Exception as e:
-            raise StatisticsError(f"Ошибка линейной регрессии: {e}")
+            raise StatisticsError(f"Linear regression error: {e}")
 
-# ==================== Vim-СТИЛЬ ИНТЕРФЕЙС ====================
+# ==================== Vim-STYLE INTERFACE ====================
 
 class VimStyleCalculator:
-    """Калькулятор с Vim-подобным интерфейсом"""
+    """Calculator with Vim-like interface"""
     
     def __init__(self):
         self.license_manager = LicenseManager()
@@ -1079,13 +1080,13 @@ class VimStyleCalculator:
         self.command_history: List[str] = []
         self.history_index = -1
         
-        # Регистрация команд
+        # Command registration
         self.commands = self._register_commands()
     
     def _register_commands(self) -> Dict[str, Any]:
-        """Регистрация всех доступных команд"""
+        """Register all available commands"""
         return {
-            # Базовые команды
+            # Basic commands
             ':q': self._cmd_quit,
             ':quit': self._cmd_quit,
             ':exit': self._cmd_quit,
@@ -1097,17 +1098,17 @@ class VimStyleCalculator:
             ':precision': self._cmd_precision,
             ':angle': self._cmd_angle,
             
-            # Лицензия
+            # License
             ':license': self._cmd_license,
             ':activate': self._cmd_activate,
             ':license_info': self._cmd_license_info,
             
-            # Переменные
+            # Variables
             ':vars': self._cmd_vars,
             ':let': self._cmd_let,
             ':del': self._cmd_del,
             
-            # Физика
+            # Physics
             ':pendulum': self._cmd_pendulum,
             ':lorentz': self._cmd_lorentz,
             ':kinetic': self._cmd_kinetic,
@@ -1115,16 +1116,16 @@ class VimStyleCalculator:
             ':orbital': self._cmd_orbital,
             ':escape': self._cmd_escape,
             
-            # Математика
+            # Mathematics
             ':solve': self._cmd_solve,
             ':deriv': self._cmd_derivative,
             ':integral': self._cmd_integral,
             
-            # Статистика
+            # Statistics
             ':stats': self._cmd_stats,
             ':regression': self._cmd_regression,
             
-            # Система
+            # System
             ':save': self._cmd_save,
             ':load': self._cmd_load,
             ':reset': self._cmd_reset,
@@ -1132,81 +1133,81 @@ class VimStyleCalculator:
         }
     
     def print_banner(self):
-        """Печать баннера"""
+        """Print banner"""
         license_info = self.license_manager.get_license_info()
-        license_status = "✅ АКТИВИРОВАНА" if license_info['valid'] else "❌ ОТСУТСТВУЕТ"
+        license_status = "✅ ACTIVATED" if license_info['valid'] else "❌ MISSING"
         license_type = license_info['type'] or "DEMO"
         
         precision_warning = ""
         if self.calc.precision > 50:
-            precision_warning = " ⚠️ ВЫСОКАЯ ТОЧНОСТЬ"
+            precision_warning = " ⚠️ HIGH PRECISION"
         elif self.calc.precision > 15:
             precision_warning = " ⚠️"
         
         banner = f"""
 ╔════════════════════════════════════════════════════════════════╗
 ║                   VIM SCIENTIFIC CALCULATOR                    ║
-║                        РЕЖИМ: {self.mode:<8}                         ║
-║                   ЛИЦЕНЗИЯ: {license_type:<9} {license_status:<18} ║
-║                   ТОЧНОСТЬ: {self.calc.precision} знаков{precision_warning:<18}        ║
-║                   УГЛЫ: {self.calc.angle_mode:<4}                                   ║
+║                        MODE: {self.mode:<8}                         ║
+║                   LICENSE: {license_type:<9} {license_status:<18} ║
+║                   PRECISION: {self.calc.precision} digits{precision_warning:<18}        ║
+║                   ANGLES: {self.calc.angle_mode:<4}                                   ║
 ╚════════════════════════════════════════════════════════════════╝
         """
         print(banner)
     
     def show_help(self):
-        """Показать справку"""
+        """Show help"""
         license_info = self.license_manager.get_license_info()
         
         help_text = f"""
 ╔════════════════════════════════════════════════════════════════╗
-║                       КОМАНДЫ КАЛЬКУЛЯТОРА                     ║
-║                    ЛИЦЕНЗИЯ: {license_info['type'] or 'DEMO':<10}                          ║
+║                       CALCULATOR COMMANDS                      ║
+║                    LICENSE: {license_info['type'] or 'DEMO':<10}                          ║
 ╚════════════════════════════════════════════════════════════════╗
 
-🎯 ОСНОВНЫЕ КОМАНДЫ:
-  :q, :quit, :exit           - Выход
-  :h, :help                  - Справка
-  :m normal|insert        - Смена режима
-  :clear                     - Очистка экрана
-  :history [N]               - История вычислений
-  :precision N               - Установка точности (1-1000)
-  :angle rad|deg|grad        - Режим углов
+🎯 BASIC COMMANDS:
+  :q, :quit, :exit           - Exit
+  :h, :help                  - Help
+  :m normal|insert        - Change mode
+  :clear                     - Clear screen
+  :history [N]               - Calculation history
+  :precision N               - Set precision (1-1000)
+  :angle rad|deg|grad        - Angle mode
 
-🔑 ЛИЦЕНЗИОННЫЕ КОМАНДЫ:
-  :license                   - Информация о лицензии
-  :activate КЛЮЧ            - Активировать лицензию
-  :license_info              - Подробная информация
+🔑 LICENSE COMMANDS:
+  :license                   - License information
+  :activate KEY             - Activate license
+  :license_info              - Detailed information
 
-📊 ПЕРЕМЕННЫЕ:
-  :vars                      - Показать переменные
-  :let var = выражение        - Установить переменную
-  :del var                   - Удалить переменную
+📊 VARIABLES:
+  :vars                      - Show variables
+  :let var = expression        - Set variable
+  :del var                   - Delete variable
 
-🚀 ФИЗИЧЕСКИЕ КОМАНДЫ: {'✅' if license_info['features']['physics_engine'] else '❌'}
-  :pendulum L [g]            - Период маятника
-  :lorentz v                 - Релятивистский γ-фактор
-  :kinetic m v               - Кинетическая энергия
-  :schwarzschild M           - Радиус Шварцшильда
-  :orbital M r               - Орбитальная скорость
-  :escape M r                - Вторая космическая скорость
+🚀 PHYSICS COMMANDS: {'✅' if license_info['features']['physics_engine'] else '❌'}
+  :pendulum L [g]            - Pendulum period
+  :lorentz v                 - Relativistic γ-factor
+  :kinetic m v               - Kinetic energy
+  :schwarzschild M           - Schwarzschild radius
+  :orbital M r               - Orbital velocity
+  :escape M r                - Escape velocity
 
-🧮 МАТЕМАТИЧЕСКИЕ КОМАНДЫ: {'✅' if license_info['features']['math_engine'] else '❌'}
-  :solve уравнение [var]     - Решить уравнение
-  :deriv выражение [var] [x] - Производная
-  :integral выражение a b    - Определенный интеграл
+🧮 MATHEMATICS COMMANDS: {'✅' if license_info['features']['math_engine'] else '❌'}
+  :solve equation [var]     - Solve equation
+  :deriv expression [var] [x] - Derivative
+  :integral expression a b    - Definite integral
 
-📈 СТАТИСТИЧЕСКИЕ КОМАНДЫ: {'✅' if license_info['features']['statistics_engine'] else '❌'}
-  :stats данные              - Описательная статистика
-  :regression x_data y_data  - Линейная регрессия
+📈 STATISTICS COMMANDS: {'✅' if license_info['features']['statistics_engine'] else '❌'}
+  :stats data              - Descriptive statistics
+  :regression x_data y_data  - Linear regression
 
-💾 СИСТЕМНЫЕ КОМАНДЫ:
-  :save [файл]               - Сохранить состояние
-  :load [файл]               - Загрузить состояние
-  :reset                     - Сброс калькулятора
-  :export_history [файл]     - Экспорт истории в файл {'✅' if license_info['features']['export_features'] else '❌'}
+💾 SYSTEM COMMANDS:
+  :save [file]               - Save state
+  :load [file]               - Load state
+  :reset                     - Reset calculator
+  :export_history [file]     - Export history to file {'✅' if license_info['features']['export_features'] else '❌'}
 
-📝 ПРИМЕРЫ:
+📝 EXAMPLES:
   :m insert
   2 + 3 * sin(pi/4)
   :let r = 6371e3
@@ -1215,147 +1216,147 @@ class VimStyleCalculator:
   :stats [1,2,3,4,5]
   :solve x**2 - 4 = 0
 
-💡 ДОСТУПНЫЕ ЛИЦЕНЗИИ:
-  🎓 STUDENT  - Базовые научные функции
-  ⚡ PRO      - Расширенные математические функции  
-  🏢 BUSINESS - Полный функционал + экспорт
+💡 AVAILABLE LICENSES:
+  🎓 STUDENT  - Basic scientific functions
+  ⚡ PRO      - Extended mathematical functions  
+  🏢 BUSINESS - Full functionality + export
         """
         print(help_text)
     
     def _is_float(self, value: str) -> bool:
-        """Проверяет, можно ли преобразовать строку в float"""
+        """Check if string can be converted to float"""
         try:
             float(value)
             return True
         except ValueError:
             return False
     
-    # ==================== РЕАЛИЗАЦИИ КОМАНД ====================
+    # ==================== COMMAND IMPLEMENTATIONS ====================
     
     def _cmd_quit(self, args: List[str]) -> bool:
-        """Команда выхода"""
-        print("👋 До свидания!")
+        """Exit command"""
+        print("👋 Goodbye!")
         self.calc._save_history()
         return False
     
     def _cmd_help(self, args: List[str]) -> bool:
-        """Команда справки"""
+        """Help command"""
         self.show_help()
         return True
     
     def _cmd_mode(self, args: List[str]) -> bool:
-        """Смена режима"""
+        """Change mode"""
         if len(args) >= 1:
             mode = args[0].upper()
             if mode in ['NORMAL', 'INSERT']:
                 self.mode = mode
-                print(f"✅ Режим изменен на: {mode}")
+                print(f"✅ Mode changed to: {mode}")
             else:
-                print("❌ Ошибка: доступные режимы - normal, insert")
+                print("❌ Error: available modes - normal, insert")
         else:
-            print("❌ Использование: :mode normal|insert")
+            print("❌ Usage: :mode normal|insert")
         return True
     
     def _cmd_clear(self, args: List[str]) -> bool:
-        """Очистка экрана"""
+        """Clear screen"""
         os.system('cls' if os.name == 'nt' else 'clear')
         return True
     
     def _cmd_history(self, args: List[str]) -> bool:
-        """История вычислений"""
+        """Calculation history"""
         try:
             limit = int(args[0]) if args else 10
             history = self.calc.get_history(limit)
             
-            print(f"\n📜 ИСТОРИЯ ВЫЧИСЛЕНИЙ (последние {len(history)} из {len(self.calc.history)}):")
+            print(f"\n📜 CALCULATION HISTORY (last {len(history)} of {len(self.calc.history)}):")
             for i, result in enumerate(history):
                 status = "✅" if result.success else "❌"
                 if result.success:
                     formatted_result = self.calc.format_result(result.result)
                     print(f"  {i+1:2d}. {status} {result.expression} = {formatted_result}")
                 else:
-                    print(f"  {i+1:2d}. {status} {result.expression} -> ОШИБКА: {result.error_message}")
+                    print(f"  {i+1:2d}. {status} {result.expression} -> ERROR: {result.error_message}")
                     
         except Exception as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_precision(self, args: List[str]) -> bool:
-        """Установка точности"""
+        """Set precision"""
         if len(args) >= 1:
             try:
                 precision = int(args[0])
                 if 1 <= precision <= 1000:
                     if precision > 15 and not self.license_manager.has_feature('custom_precision'):
-                        print("❌ Ошибка: высокая точность требует активации лицензии")
-                        print("💡 Доступные лицензии: STUDENT, PRO, BUSINESS")
+                        print("❌ Error: high precision requires license activation")
+                        print("💡 Available licenses: STUDENT, PRO, BUSINESS")
                         return True
                     
                     if precision > 50:
-                        print("⚠️  ВНИМАНИЕ: Установлена высокая точность!")
-                        print("   Это может замедлить вычисления и занять много памяти")
-                        confirm = input("   Продолжить? (y/N): ")
+                        print("⚠️  WARNING: High precision set!")
+                        print("   This may slow down calculations and use more memory")
+                        confirm = input("   Continue? (y/N): ")
                         if confirm.lower() != 'y':
-                            print("❌ Установка точности отменена")
+                            print("❌ Precision setting cancelled")
                             return True
                     
                     if precision > 100:
-                        print(f"⚠️  Установлена ОЧЕНЬ высокая точность: {precision} знаков")
-                        print("   Вычисления могут быть медленными")
+                        print(f"⚠️  VERY high precision set: {precision} digits")
+                        print("   Calculations may be slow")
                     
                     old_precision = self.calc.precision
                     self.calc.precision = precision
-                    print(f"✅ Точность изменена: {old_precision} -> {precision} знаков")
+                    print(f"✅ Precision changed: {old_precision} -> {precision} digits")
                     
                     if precision > 15:
-                        print("💡 Для просмотра полного результата используйте :history")
-                        print("💡 Вычисления теперь используют высокоточную арифметику")
+                        print("💡 To view full result use :history")
+                        print("💡 Calculations now use high-precision arithmetic")
                 else:
-                    print("❌ Ошибка: точность должна быть от 1 до 1000")
+                    print("❌ Error: precision must be from 1 to 1000")
             except ValueError:
-                print("❌ Ошибка: точность должна быть целым числом")
+                print("❌ Error: precision must be an integer")
         else:
-            print("❌ Использование: :precision число")
+            print("❌ Usage: :precision number")
         return True
     
     def _cmd_angle(self, args: List[str]) -> bool:
-        """Установка режима углов"""
+        """Set angle mode"""
         if len(args) >= 1:
             mode = args[0].lower()
             if mode in ['rad', 'deg', 'grad']:
                 self.calc.angle_mode = mode
-                print(f"✅ Режим углов установлен: {mode}")
+                print(f"✅ Angle mode set: {mode}")
             else:
-                print("❌ Ошибка: доступные режимы - rad, deg, grad")
+                print("❌ Error: available modes - rad, deg, grad")
         else:
-            print("❌ Использование: :angle rad|deg|grad")
+            print("❌ Usage: :angle rad|deg|grad")
         return True
     
     def _cmd_license(self, args: List[str]) -> bool:
-        """Информация о лицензии"""
+        """License information"""
         license_info = self.license_manager.get_license_info()
         
-        print("\n🔑 ИНФОРМАЦИЯ О ЛИЦЕНЗИИ:")
-        print(f"  Статус: {'✅ АКТИВИРОВАНА' if license_info['valid'] else '❌ ОТСУТСТВУЕТ'}")
-        print(f"  Тип: {license_info['type'] or 'DEMO'}")
-        print(f"  Ключ: {license_info['key'] or 'Не активирован'}")
+        print("\n🔑 LICENSE INFORMATION:")
+        print(f"  Status: {'✅ ACTIVATED' if license_info['valid'] else '❌ MISSING'}")
+        print(f"  Type: {license_info['type'] or 'DEMO'}")
+        print(f"  Key: {license_info['key'] or 'Not activated'}")
         
-        print("\n📋 ДОСТУПНЫЕ ФУНКЦИИ:")
+        print("\n📋 AVAILABLE FUNCTIONS:")
         features = license_info['features']
         for feature, enabled in features.items():
             status = "✅" if enabled else "❌"
             print(f"  {status} {self._get_feature_description(feature)}")
         
         if not license_info['valid']:
-            print("\n💡 Для активации введите: :activate ВАШ_ЛИЦЕНЗИОННЫЙ_КЛЮЧ")
-            print("🎓 STUDENT - Базовые научные функции")
-            print("⚡ PRO     - Расширенные математические функции")  
-            print("🏢 BUSINESS - Полный функционал + экспорт")
+            print("\n💡 To activate, enter: :activate YOUR_LICENSE_KEY")
+            print("🎓 STUDENT - Basic scientific functions")
+            print("⚡ PRO     - Extended mathematical functions")  
+            print("🏢 BUSINESS - Full functionality + export")
         
         return True
     
     def _cmd_activate(self, args: List[str]) -> bool:
-        """Активация лицензии"""
+        """License activation"""
         if len(args) >= 1:
             license_key = args[0]
             success, message = self.license_manager.validate_license(license_key)
@@ -1368,75 +1369,75 @@ class VimStyleCalculator:
                 self.math = MathEngine(self.calc, self.license_manager)
                 self.stats = StatisticsEngine(self.calc, self.license_manager)
                 
-                print("🎉 Поздравляем! Премиум функции теперь доступны!")
+                print("🎉 Congratulations! Premium functions now available!")
                 self._cmd_license([])
         else:
-            print("❌ Использование: :activate ЛИЦЕНЗИОННЫЙ_КЛЮЧ")
-            print("💡 Пример: :activate BUS123456789ABCDE")
+            print("❌ Usage: :activate LICENSE_KEY")
+            print("💡 Example: :activate BUS123456789ABCDE")
         
         return True
     
     def _cmd_license_info(self, args: List[str]) -> bool:
-        """Подробная информация о лицензии"""
+        """Detailed license information"""
         license_info = self.license_manager.get_license_info()
         
-        print("\n🔑 ПОДРОБНАЯ ИНФОРМАЦИЯ О ЛИЦЕНЗИИ:")
-        print(f"  Статус: {'✅ АКТИВИРОВАНА' if license_info['valid'] else '❌ ОТСУТСТВУЕТ'}")
-        print(f"  Тип: {license_info['type'] or 'DEMO'}")
-        print(f"  Ключ: {license_info['key'] or 'Не активирован'}")
+        print("\n🔑 DETAILED LICENSE INFORMATION:")
+        print(f"  Status: {'✅ ACTIVATED' if license_info['valid'] else '❌ MISSING'}")
+        print(f"  Type: {license_info['type'] or 'DEMO'}")
+        print(f"  Key: {license_info['key'] or 'Not activated'}")
         
-        print("\n🎯 УРОВНИ ЛИЦЕНЗИЙ:")
-        print("  🎓 STUDENT  - Базовые научные функции")
-        print("     • Вычисления с обычной точностью")
-        print("     • Физические расчеты") 
-        print("     • Статистические функции")
-        print("     • Решение уравнений")
+        print("\n🎯 LICENSE LEVELS:")
+        print("  🎓 STUDENT  - Basic scientific functions")
+        print("     • Calculations with normal precision")
+        print("     • Physics calculations")
+        print("     • Statistical functions")
+        print("     • Equation solving")
         
-        print("\n  ⚡ PRO      - Расширенные возможности")
-        print("     • Всё из STUDENT +")
-        print("     • Высокая точность (до 1000 знаков)")
-        print("     • Символьные вычисления")
-        print("     • Расширенные математические функции")
+        print("\n  ⚡ PRO      - Extended capabilities")
+        print("     • Everything from STUDENT +")
+        print("     • High precision (up to 1000 digits)")
+        print("     • Symbolic calculations")
+        print("     • Extended mathematical functions")
         
-        print("\n  🏢 BUSINESS - Профессиональный уровень")
-        print("     • Всё из PRO +")
-        print("     • Экспорт истории и данных")
-        print("     • Приоритетная поддержка")
+        print("\n  🏢 BUSINESS - Professional level")
+        print("     • Everything from PRO +")
+        print("     • History and data export")
+        print("     • Priority support")
         
         return True
     
     def _get_feature_description(self, feature: str) -> str:
-        """Возвращает описание функции"""
+        """Return feature description"""
         descriptions = {
-            'basic_calculations': 'Базовые вычисления',
-            'trigonometry': 'Тригонометрические функции',
-            'logarithms': 'Логарифмы и экспоненты',
-            'constants': 'Математические константы',
-            'variables': 'Работа с переменными',
-            'history': 'История вычислений',
-            'high_precision': 'Высокая точность (>15 знаков)',
-            'physics_engine': 'Физические расчеты',
-            'math_engine': 'Математические движки',
-            'statistics_engine': 'Статистические расчеты',
-            'symbolic_math': 'Символьные вычисления',
-            'advanced_functions': 'Расширенные функции',
-            'export_features': 'Экспорт данных',
-            'custom_precision': 'Настройка точности',
+            'basic_calculations': 'Basic calculations',
+            'trigonometry': 'Trigonometric functions',
+            'logarithms': 'Logarithms and exponents',
+            'constants': 'Mathematical constants',
+            'variables': 'Variable operations',
+            'history': 'Calculation history',
+            'high_precision': 'High precision (>15 digits)',
+            'physics_engine': 'Physics calculations',
+            'math_engine': 'Mathematical engines',
+            'statistics_engine': 'Statistical calculations',
+            'symbolic_math': 'Symbolic calculations',
+            'advanced_functions': 'Extended functions',
+            'export_features': 'Data export',
+            'custom_precision': 'Precision customization',
         }
         return descriptions.get(feature, feature)
     
     def _cmd_vars(self, args: List[str]) -> bool:
-        """Показать переменные"""
-        print("\n📊 ПЕРЕМЕННЫЕ:")
+        """Show variables"""
+        print("\n📊 VARIABLES:")
         for var, val in self.calc.variables.items():
             print(f"  {var} = {val}")
         
         if not self.calc.variables:
-            print("  (нет пользовательских переменных)")
+            print("  (no user variables)")
         return True
     
     def _cmd_let(self, args: List[str]) -> bool:
-        """Установка переменной"""
+        """Set variable"""
         try:
             if len(args) >= 3 and args[1] == '=':
                 var_name = args[0]
@@ -1445,121 +1446,121 @@ class VimStyleCalculator:
                 result = self.calc.calculate(expr)
                 self.calc.set_variable(var_name, result)
                 formatted_result = self.calc.format_result(result)
-                print(f"✅ Установлено: {var_name} = {formatted_result}")
+                print(f"✅ Set: {var_name} = {formatted_result}")
             else:
-                print("❌ Использование: :let переменная = выражение")
+                print("❌ Usage: :let variable = expression")
                 
         except (CalculatorError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_del(self, args: List[str]) -> bool:
-        """Удаление переменной"""
+        """Delete variable"""
         if len(args) >= 1:
             var_name = args[0]
             if var_name in self.calc.variables:
                 del self.calc.variables[var_name]
-                print(f"✅ Удалена переменная: {var_name}")
+                print(f"✅ Deleted variable: {var_name}")
             else:
-                print(f"❌ Ошибка: переменная '{var_name}' не найдена")
+                print(f"❌ Error: variable '{var_name}' not found")
         else:
-            print("❌ Использование: :del имя_переменной")
+            print("❌ Usage: :del variable_name")
         return True
     
     def _cmd_pendulum(self, args: List[str]) -> bool:
-        """Период маятника"""
+        """Pendulum period"""
         try:
             if len(args) >= 1:
                 length = float(self.calc.calculate(args[0]))
                 gravity = float(self.calc.calculate(args[1])) if len(args) > 1 else None
                 
                 period = self.physics.pendulum_period(length, gravity)
-                print(f"✅ Период маятника: T = 2π√({length}/{gravity or 'g'}) = {period:.6f} с")
+                print(f"✅ Pendulum period: T = 2π√({length}/{gravity or 'g'}) = {period:.6f} s")
             else:
-                print("❌ Использование: :pendulum длина [ускорение_свободного_падения]")
+                print("❌ Usage: :pendulum length [gravity_acceleration]")
                 
         except (CalculatorError, PhysicsError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_lorentz(self, args: List[str]) -> bool:
-        """Релятивистский γ-фактор"""
+        """Relativistic γ-factor"""
         try:
             if len(args) >= 1:
                 velocity = float(self.calc.calculate(args[0]))
                 gamma = self.physics.lorentz_factor(velocity)
-                print(f"✅ γ-фактор для v={velocity:.2e} м/с: γ = {gamma:.6f}")
+                print(f"✅ γ-factor for v={velocity:.2e} m/s: γ = {gamma:.6f}")
             else:
-                print("❌ Использование: :lorentz скорость")
+                print("❌ Usage: :lorentz velocity")
                 
         except (CalculatorError, PhysicsError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_kinetic(self, args: List[str]) -> bool:
-        """Кинетическая энергия"""
+        """Kinetic energy"""
         try:
             if len(args) >= 2:
                 mass = float(self.calc.calculate(args[0]))
                 velocity = float(self.calc.calculate(args[1]))
                 
                 energy = self.physics.kinetic_energy(mass, velocity)
-                print(f"✅ Кинетическая энергия: E = ½·{mass}·{velocity}² = {energy:.6f} Дж")
+                print(f"✅ Kinetic energy: E = ½·{mass}·{velocity}² = {energy:.6f} J")
             else:
-                print("❌ Использование: :kinetic масса скорость")
+                print("❌ Usage: :kinetic mass velocity")
                 
         except (CalculatorError, PhysicsError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_schwarzschild(self, args: List[str]) -> bool:
-        """Радиус Шварцшильда"""
+        """Schwarzschild radius"""
         try:
             if len(args) >= 1:
                 mass = float(self.calc.calculate(args[0]))
                 radius = self.physics.schwarzschild_radius(mass)
-                print(f"✅ Радиус Шварцшильда для M={mass} кг: r = {radius:.2e} м")
+                print(f"✅ Schwarzschild radius for M={mass} kg: r = {radius:.2e} m")
             else:
-                print("❌ Использование: :schwarzschild масса")
+                print("❌ Usage: :schwarzschild mass")
                 
         except (CalculatorError, PhysicsError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_orbital(self, args: List[str]) -> bool:
-        """Орбитальная скорость"""
+        """Orbital velocity"""
         try:
             if len(args) >= 2:
                 mass = float(self.calc.calculate(args[0]))
                 radius = float(self.calc.calculate(args[1]))
                 
                 velocity = self.physics.orbital_velocity(mass, radius)
-                print(f"✅ Орбитальная скорость: v = √(G*{mass}/{radius}) = {velocity:.2f} м/с")
+                print(f"✅ Orbital velocity: v = √(G*{mass}/{radius}) = {velocity:.2f} m/s")
             else:
-                print("❌ Использование: :orbital масса радиус")
+                print("❌ Usage: :orbital mass radius")
                 
         except (CalculatorError, PhysicsError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_escape(self, args: List[str]) -> bool:
-        """Вторая космическая скорость"""
+        """Escape velocity"""
         try:
             if len(args) >= 2:
                 mass = float(self.calc.calculate(args[0]))
                 radius = float(self.calc.calculate(args[1]))
                 
                 velocity = self.physics.escape_velocity(mass, radius)
-                print(f"✅ Вторая космическая скорость: v = √(2G*{mass}/{radius}) = {velocity:.2f} м/с")
+                print(f"✅ Escape velocity: v = √(2G*{mass}/{radius}) = {velocity:.2f} m/s")
             else:
-                print("❌ Использование: :escape масса радиус")
+                print("❌ Usage: :escape mass radius")
                 
         except (CalculatorError, PhysicsError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_solve(self, args: List[str]) -> bool:
-        """Решение уравнения"""
+        """Solve equation"""
         try:
             if len(args) >= 1:
                 equation = ' '.join(args)
@@ -1572,20 +1573,20 @@ class VimStyleCalculator:
                 
                 solutions = self.math.solve_equation(equation, variable)
                 if solutions:
-                    print(f"✅ Решения уравнения {equation}:")
+                    print(f"✅ Solutions for equation {equation}:")
                     for i, sol in enumerate(solutions):
                         print(f"  {variable}_{i+1} = {sol:.6f}")
                 else:
-                    print("❌ Уравнение не имеет действительных решений")
+                    print("❌ Equation has no real solutions")
             else:
-                print("❌ Использование: :solve уравнение [переменная]")
+                print("❌ Usage: :solve equation [variable]")
                 
         except (CalculatorError, MathError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_derivative(self, args: List[str]) -> bool:
-        """Производная функции"""
+        """Function derivative"""
         try:
             if len(args) >= 1:
                 full_cmd = ' '.join(args)
@@ -1609,22 +1610,22 @@ class VimStyleCalculator:
                 result = self.math.derivative(expression, variable, point)
                 
                 if point is not None:
-                    print(f"✅ Производная {expression} по {variable} в точке {point}: {result:.6f}")
+                    print(f"✅ Derivative of {expression} by {variable} at point {point}: {result:.6f}")
                 else:
-                    print(f"✅ Производная {expression} по {variable}: {result}")
+                    print(f"✅ Derivative of {expression} by {variable}: {result}")
             else:
-                print("❌ Использование: :deriv выражение")
-                print("💡 Примеры:")
+                print("❌ Usage: :deriv expression")
+                print("💡 Examples:")
                 print("   :deriv x**3 + 2*x**2 - 5*x + 1")
                 print("   :deriv sin(x) + cos(x) var=x")
                 print("   :deriv x**2 point=2")
                 
         except (CalculatorError, MathError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_integral(self, args: List[str]) -> bool:
-        """Определенный интеграл"""
+        """Definite integral"""
         try:
             if len(args) >= 3:
                 expression = args[0]
@@ -1633,16 +1634,16 @@ class VimStyleCalculator:
                 variable = args[3] if len(args) > 3 else 'x'
                 
                 result = self.math.definite_integral(expression, variable, (a, b))
-                print(f"✅ Интеграл ∫[{a}→{b}] {expression} d{variable} = {result:.6f}")
+                print(f"✅ Integral ∫[{a}→{b}] {expression} d{variable} = {result:.6f}")
             else:
-                print("❌ Использование: :integral выражение нижний_предел верхний_предел [переменная]")
+                print("❌ Usage: :integral expression lower_limit upper_limit [variable]")
                 
         except (CalculatorError, MathError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_stats(self, args: List[str]) -> bool:
-        """Описательная статистика"""
+        """Descriptive statistics"""
         try:
             if len(args) >= 1:
                 data_str = ' '.join(args)
@@ -1650,21 +1651,21 @@ class VimStyleCalculator:
                 data = [float(x.strip()) for x in data_str.split(',')]
                 
                 stats_result = self.stats.descriptive_statistics(data)
-                print("\n📊 ОПИСАТЕЛЬНАЯ СТАТИСТИКА:")
+                print("\n📊 DESCRIPTIVE STATISTICS:")
                 for key, value in stats_result.items():
                     if math.isnan(value):
-                        print(f"  {key:>12}: не определено")
+                        print(f"  {key:>12}: not defined")
                     else:
                         print(f"  {key:>12}: {value:.6f}")
             else:
-                print("❌ Использование: :stats [значение1, значение2, ...]")
+                print("❌ Usage: :stats [value1, value2, ...]")
                 
         except (CalculatorError, StatisticsError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_regression(self, args: List[str]) -> bool:
-        """Линейная регрессия"""
+        """Linear regression"""
         try:
             if len(args) >= 2:
                 x_str = args[0].strip('[]')
@@ -1675,27 +1676,27 @@ class VimStyleCalculator:
                 
                 regression_result = self.stats.linear_regression(x_data, y_data)
                 
-                print("\n📈 ЛИНЕЙНАЯ РЕГРЕССИЯ:")
-                print(f"  Уравнение: y = {regression_result['slope']:.6f}x + {regression_result['intercept']:.6f}")
+                print("\n📈 LINEAR REGRESSION:")
+                print(f"  Equation: y = {regression_result['slope']:.6f}x + {regression_result['intercept']:.6f}")
                 print(f"  R² = {regression_result['r_squared']:.6f}")
                 
                 p_val = regression_result['p_value']
                 if p_val < 1e-10:
-                    print(f"  p-значение ≈ 0 (статистически значимо)")
-                    print("  💡 p-значение очень мало, что указывает на сильную связь между переменными")
+                    print(f"  p-value ≈ 0 (statistically significant)")
+                    print("  💡 p-value is very small, indicating strong relationship between variables")
                 else:
-                    print(f"  p-значение = {p_val:.6f}")
+                    print(f"  p-value = {p_val:.6f}")
                 
-                print(f"  Стандартная ошибка = {regression_result['std_error']:.6f}")
+                print(f"  Standard error = {regression_result['std_error']:.6f}")
             else:
-                print("❌ Использование: :regression [x1,x2,...] [y1,y2,...]")
+                print("❌ Usage: :regression [x1,x2,...] [y1,y2,...]")
                 
         except (CalculatorError, StatisticsError, LicenseError) as e:
-            print(f"❌ Ошибка: {e}")
+            print(f"❌ Error: {e}")
         return True
     
     def _cmd_save(self, args: List[str]) -> bool:
-        """Сохранение состояния"""
+        """Save state"""
         try:
             filename = args[0] if args else "calculator_state.pkl"
             state = {
@@ -1707,13 +1708,13 @@ class VimStyleCalculator:
             }
             with open(filename, 'wb') as f:
                 pickle.dump(state, f)
-            print(f"✅ Состояние сохранено в {filename}")
+            print(f"✅ State saved to {filename}")
         except Exception as e:
-            print(f"❌ Ошибка сохранения: {e}")
+            print(f"❌ Save error: {e}")
         return True
     
     def _cmd_load(self, args: List[str]) -> bool:
-        """Загрузка состояния"""
+        """Load state"""
         try:
             filename = args[0] if args else "calculator_state.pkl"
             with open(filename, 'rb') as f:
@@ -1731,36 +1732,36 @@ class VimStyleCalculator:
                 self.license_manager.license_valid = True
                 self.license_manager.license_features = license_info.get('features', {})
             
-            print(f"✅ Состояние загружено из {filename}")
-            print(f"📖 Загружено {len(self.calc.history)} записей истории")
+            print(f"✅ State loaded from {filename}")
+            print(f"📖 Loaded {len(self.calc.history)} history records")
             
             if self.license_manager.license_valid:
-                print(f"🔑 Лицензия {self.license_manager.license_type} восстановлена")
+                print(f"🔑 {self.license_manager.license_type} license restored")
         except Exception as e:
-            print(f"❌ Ошибка загрузки: {e}")
+            print(f"❌ Load error: {e}")
         return True
     
     def _cmd_export_history(self, args: List[str]) -> bool:
-        """Экспорт истории"""
+        """Export history"""
         try:
             filename = args[0] if args else "calculator_history_export.txt"
             self.calc.export_history(filename)
         except (LicenseError, Exception) as e:
-            print(f"❌ Ошибка экспорта: {e}")
+            print(f"❌ Export error: {e}")
         return True
     
     def _cmd_reset(self, args: List[str]) -> bool:
-        """Сброс калькулятора"""
+        """Reset calculator"""
         self.calc.variables.clear()
         self.calc.history.clear()
         self.calc.precision = 10
         self.calc.angle_mode = 'rad'
         self.license_manager.reset_license()
-        print("✅ Калькулятор сброшен до начального состояния")
+        print("✅ Calculator reset to initial state")
         return True
     
     def handle_command(self, command: str) -> bool:
-        """Обработка команды"""
+        """Handle command"""
         command = command.strip()
         
         if not command:
@@ -1777,17 +1778,17 @@ class VimStyleCalculator:
         if cmd_key in self.commands:
             return self.commands[cmd_key](args)
         else:
-            print(f"❌ Неизвестная команда: {cmd_key}")
-            print("💡 Введите :help для списка команд")
+            print(f"❌ Unknown command: {cmd_key}")
+            print("💡 Enter :help for command list")
             return True
     
     def run(self):
-        """Главный цикл выполнения"""
-        print("🚀 Добро пожаловать в НАУЧНЫЙ КАЛЬКУЛЯТОР VIM-STYLE!")
-        print("💡 Введите :help для справки, :q для выхода")
-        print("🔑 Для доступа к премиум функциям активируйте лицензию: :activate КЛЮЧ")
+        """Main execution loop"""
+        print("🚀 Welcome to VIM-STYLE SCIENTIFIC CALCULATOR!")
+        print("💡 Enter :help for help, :q to exit")
+        print("🔑 For premium functions, activate license: :activate KEY")
         
-        # Автозагрузка лицензии
+        # Auto-load license
         self.license_manager.auto_load()
         
         running = True
@@ -1814,21 +1815,21 @@ class VimStyleCalculator:
                         try:
                             result = self.calc.calculate(user_input)
                             formatted_result = self.calc.format_result(result)
-                            print(f"✅ РЕЗУЛЬТАТ: {formatted_result}")
+                            print(f"✅ RESULT: {formatted_result}")
                         except (CalculatorError, LicenseError) as e:
-                            print(f"❌ ОШИБКА: {e}")
+                            print(f"❌ ERROR: {e}")
                 
             except KeyboardInterrupt:
-                print("\n\n💡 Для выхода введите :q")
+                print("\n\n💡 To exit, enter :q")
             except EOFError:
-                print("\n\n👋 До свидания!")
+                print("\n\n👋 Goodbye!")
                 self.calc._save_history()
                 running = False
             except Exception as e:
-                print(f"💥 Критическая ошибка: {e}")
+                print(f"💥 Critical error: {e}")
                 running = False
 
-# ==================== ЗАПУСК ====================
+# ==================== LAUNCH ====================
 
 if __name__ == "__main__":
     calculator = VimStyleCalculator()

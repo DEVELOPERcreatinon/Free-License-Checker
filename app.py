@@ -29,12 +29,12 @@ class LicenseServer:
         self.app = self.create_flask_app()
     
     def load_config(self, config_path):
-        """Загрузка конфигурации"""
+        """Load configuration"""
         with open(config_path, 'r') as f:
             self.config = json.load(f)
     
     def setup_logging(self):
-        """Настройка логирования"""
+        """Setup logging"""
         logging_config = self.config['logging']
         
         handler = RotatingFileHandler(
@@ -52,10 +52,10 @@ class LicenseServer:
         self.logger = logging.getLogger(__name__)
     
     def create_flask_app(self):
-        """Создание Flask приложения"""
+        """Create Flask application"""
         app = Flask(__name__)
         
-        # Настройка ограничителя запросов с хранилищем
+        # Configure rate limiter with storage
         limiter_config = self.config['rate_limiting']
         self.limiter = Limiter(
             app=app,
@@ -68,8 +68,8 @@ class LicenseServer:
         
         @app.before_request
         def before_request():
-            """Проверка безопасности перед каждым запросом"""
-            # Пропускаем health check
+            """Security check before each request"""
+            # Skip health check
             if request.path == '/health':
                 return
             
@@ -88,7 +88,7 @@ class LicenseServer:
         @app.route('/api/validate', methods=['POST'])
         @self.limiter.limit(f"{self.config['security']['max_requests_per_minute']} per minute")
         def validate_license():
-            """Эндпоинт для проверки лицензии"""
+            """Endpoint for license validation"""
             try:
                 data = request.get_json()
                 
@@ -106,28 +106,26 @@ class LicenseServer:
                             'message': f'Missing required field: {field}'
                         }), 400
                 
-
-                
                 license_key = data['license_key']
                 license_type = data['license_type']
                 timestamp = data['timestamp']
                 client_info = data.get('client_info', '')
                 
-                # Проверка формата ключа
+                # Check key format
                 if len(license_key) != self.config['licensing']['key_length']:
                     return jsonify({
                         'status': 'error',
                         'message': 'Invalid key format'
                     }), 400
                 
-                # Проверка типа лицензии
+                # Check license type
                 if license_type not in self.config['licensing']['license_types']:
                     return jsonify({
                         'status': 'error',
                         'message': 'Invalid license type'
                     }), 400
                 
-                # Валидация лицензии
+                # Validate license
                 is_valid, message = self.db.validate_license(
                     license_key,
                     license_type,
@@ -141,7 +139,7 @@ class LicenseServer:
                     'timestamp': datetime.utcnow().isoformat()
                 }
                 
-                # Логирование запроса
+                # Log request
                 if self.config['logging']['log_requests']:
                     self.logger.info(
                         f"License validation - Key: {license_key}, "
@@ -161,7 +159,7 @@ class LicenseServer:
         @app.route('/api/admin/generate-keys', methods=['POST'])
         @self.limiter.limit(f"{self.config['security']['max_requests_per_minute']} per minute")
         def generate_keys():
-            """Эндпоинт для генерации ключей (только для админов)"""
+            """Endpoint for key generation (admin only)"""
             try:
                 auth_header = request.headers.get('Authorization')
                 if not self.verify_admin_token(auth_header):
@@ -188,7 +186,7 @@ class LicenseServer:
         @app.route('/api/admin/stats', methods=['GET'])
         @self.limiter.limit(f"{self.config['security']['max_requests_per_minute']} per minute")
         def get_stats():
-            """Эндпоинт для получения статистики (только для админов)"""
+            """Endpoint for getting statistics (admin only)"""
             try:
                 auth_header = request.headers.get('Authorization')
                 if not self.verify_admin_token(auth_header):
@@ -213,7 +211,7 @@ class LicenseServer:
         
         @app.route('/health', methods=['GET'])
         def health_check():
-            """Эндпоинт для проверки здоровья сервера"""
+            """Endpoint for server health check"""
             return jsonify({
                 'status': 'success',
                 'message': 'Server is running',
@@ -221,8 +219,9 @@ class LicenseServer:
             }), 200
         
         return app
+    
     def _generate_hmac_signature(self, data: str) -> str:
-        """Генерирует HMAC подпись на сервере"""
+        """Generate HMAC signature on server"""
         try:
             secret_bytes = base64.b64decode(self.config['security']['hmac_secret'])
             signature = hmac.new(
@@ -232,10 +231,11 @@ class LicenseServer:
             ).digest()
             return base64.b64encode(signature).decode('utf-8')
         except Exception as e:
-            print(f"❌ Ошибка генерации HMAC на сервере: {e}")
+            print(f"❌ Server HMAC generation error: {e}")
             return ""
+    
     def authenticate_request(self):
-        """Аутентификация запроса"""
+        """Authenticate request"""
         if not self.config['security']['api_key_required']:
             return True
         
@@ -246,35 +246,35 @@ class LicenseServer:
         if self.config['security']['require_encrypted_communication']:
             signature = request.headers.get('X-Signature')
             if not signature:
-                print("❌ HMAC подпись отсутствует")
+                print("❌ HMAC signature missing")
                 return False
             
-            # Получаем данные запроса
+            # Get request data
             data = request.get_json()
             if not data:
-                print("❌ Нет данных для проверки подписи")
+                print("❌ No data for signature verification")
                 return False
             
-            # Форматируем так же как клиент
+            # Format same as client
             data_str = json.dumps(data, sort_keys=True, separators=(',', ':'))
-            print(f"🔐 Данные для проверки: {data_str}")
-            print(f"🔐 Полученная подпись: {signature}")
+            print(f"🔐 Data for verification: {data_str}")
+            print(f"🔐 Received signature: {signature}")
             
-            # Генерируем ожидаемую подпись
+            # Generate expected signature
             expected_signature = self._generate_hmac_signature(data_str)
-            print(f"🔐 Ожидаемая подпись: {expected_signature}")
+            print(f"🔐 Expected signature: {expected_signature}")
             
-            # Сравниваем подписи
+            # Compare signatures
             if not hmac.compare_digest(signature, expected_signature):
-                print("❌ HMAC подписи не совпадают")
+                print("❌ HMAC signatures don't match")
                 return False
             
-            print("✅ HMAC подпись верна")
+            print("✅ HMAC signature is valid")
         
-        return True 
+        return True
     
     def verify_admin_token(self, auth_header):
-        """Проверка административного токена"""
+        """Verify admin token"""
         if not auth_header or not auth_header.startswith('Bearer '):
             return False
         
@@ -283,7 +283,7 @@ class LicenseServer:
         return payload is not None and payload.get('admin') == True
     
     def check_ip_restrictions(self):
-        """Проверка ограничений по IP"""
+        """Check IP restrictions"""
         client_ip = get_remote_address()
         allowed_ips = self.config['security']['allowed_ips']
         blocked_ips = self.config['security']['blocked_ips']
@@ -297,7 +297,7 @@ class LicenseServer:
         return True
     
     def run(self):
-        """Запуск сервера"""
+        """Start server"""
         server_config = self.config['server']
         
         if server_config['ssl_enabled']:

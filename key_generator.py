@@ -22,7 +22,7 @@ class KeyGenerator:
         }
     
     def generate_keys_for_all_types(self):
-        """Генерация ключей для всех типов лицензий"""
+        """Generate keys for all license types"""
         results = {}
         
         for license_type in self.config['licensing']['license_types']:
@@ -34,15 +34,15 @@ class KeyGenerator:
         return results
     
     def generate_keys_for_type(self, license_type, count):
-        """Генерация ключей для конкретного типа лицензии"""
+        """Generate keys for specific license type"""
         generated_keys = []
         success_count = 0
         
         for i in range(count):
-            # Генерируем ключ с префиксом
+            # Generate key with prefix
             key = self.generate_prefixed_key(license_type)
             
-            # Используем default_validity_days из конфигурации
+            # Use default_validity_days from configuration
             validity_days = self.config['licensing']['default_validity_days']
             
             if self.db.add_license_key(key, license_type, validity_days):
@@ -56,13 +56,13 @@ class KeyGenerator:
         }
     
     def generate_prefixed_key(self, license_type):
-        """Генерация ключа с префиксом соответствующего типа"""
+        """Generate key with prefix of appropriate type"""
         prefix = self.prefixes.get(license_type, "")
         prefix_length = len(prefix)
         
-        # Генерируем основную часть ключа (общая длина минус длина префикса)
+        # Generate main part of key (total length minus prefix length)
         main_key_length = self.config['licensing']['key_length'] - prefix_length
         main_part = self.security.generate_secure_key(main_key_length)
         
-        # Комбинируем префикс и основную часть
+        # Combine prefix and main part
         return prefix + main_part
