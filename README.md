@@ -37,7 +37,7 @@ All source code files (except `config.json`) are licensed under the **Mozilla Pu
 ### 1. Clone or Download the Project
 
 ```bash
-git clone https://github.com/DEVELOPERcreatinon/Free-Licence-Checker.git
+git clone https://github.com/DEVELOPERcreatinon/Free-License-Checker.git
 cd Free-Licence-Checker
 ```
 
