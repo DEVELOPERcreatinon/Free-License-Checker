@@ -1833,4 +1833,5 @@ class VimStyleCalculator:
 
 if __name__ == "__main__":
     calculator = VimStyleCalculator()
+
     calculator.run()
