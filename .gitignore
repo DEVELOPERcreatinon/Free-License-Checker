@@ -4,6 +4,8 @@ config.json
 *.log
 cert.pem
 key.pem
+cmd_here.bat
+create_venv.bat
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -147,6 +149,7 @@ celerybeat.pid
 .venv
 env/
 venv/
+venv311/
 ENV/
 env.bak/
 venv.bak/
