@@ -2,8 +2,8 @@
 config.json
 *.db
 *.log
-cert.pem
-key.pem
+*.pem
+*.bat
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -147,6 +147,7 @@ celerybeat.pid
 .venv
 env/
 venv/
+venv311/
 ENV/
 env.bak/
 venv.bak/
